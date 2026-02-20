@@ -53,9 +53,14 @@ file(GLOB PRIVATE_SOURCE
 	"${FFX_SRC_BACKENDS_PATH}/shared/blob_accessors/"
     "${CMAKE_CURRENT_SOURCE_DIR}/*.h"
     "${CMAKE_CURRENT_SOURCE_DIR}/*.cpp"
-    "${CMAKE_CURRENT_SOURCE_DIR}/FrameInterpolationSwapchain/*.h"
-    "${CMAKE_CURRENT_SOURCE_DIR}/FrameInterpolationSwapchain/*.cpp"
 )
+
+if (WIN32 AND (FFX_FI OR FFX_ALL))
+	file(GLOB FFX_FRAMEINTERPOLATION_SWAPCHAIN_SOURCE
+		"${CMAKE_CURRENT_SOURCE_DIR}/FrameInterpolationSwapchain/*.h"
+		"${CMAKE_CURRENT_SOURCE_DIR}/FrameInterpolationSwapchain/*.cpp")
+	list(APPEND PRIVATE_SOURCE ${FFX_FRAMEINTERPOLATION_SWAPCHAIN_SOURCE})
+endif()
 
 if (FFX_FSR1 OR FFX_ALL)
 	set(FFX_FSR1_PRIVATE_SOURCE

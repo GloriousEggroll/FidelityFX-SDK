@@ -22,6 +22,8 @@
 
 #include "backends.h"
 
+#include <cstring>
+
 #ifdef FFX_BACKEND_DX12
 #include <ffx_api/dx12/ffx_api_dx12.h>
 #include <FidelityFX/host/backends/dx12/ffx_dx12.h>

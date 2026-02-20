@@ -23,8 +23,15 @@
 #pragma once
 
 #include <cstdint>
-#include <cstdio>      // sprintf_s
+#include <cstdio>
+#include <cstring>
 #include <FidelityFX/host/ffx_assert.h>
+
+#if defined(_WIN32)
+#define FFX_BREADCRUMBS_SPRINTF sprintf_s
+#else
+#define FFX_BREADCRUMBS_SPRINTF std::snprintf
+#endif
 
 #define FFX_BREADCRUMBS_APPEND_STRING(buff, count, str)                                  \
     do                                                                                   \
@@ -48,7 +55,7 @@
     do                                                                           \
     {                                                                            \
         char _numberStr[maxLength];                                              \
-        const size_t _length = sprintf_s(_numberStr, maxLength, format, number); \
+        const size_t _length = FFX_BREADCRUMBS_SPRINTF(_numberStr, maxLength, format, number); \
         buff = (char*)ffxBreadcrumbsAppendList(buff, count, 1, _length, allocs); \
         memcpy(buff + count, _numberStr, _length);                               \
         count += _length;                                                        \
@@ -116,7 +123,7 @@
     {                                                                                               \
         FFX_BREADCRUMBS_APPEND_STRING(buff, count, FFX_BREADCRUMBS_PRINTING_INDENT #member ": 0x"); \
         char _hexStr[maxLength];                                                                    \
-        const size_t _length = sprintf_s(_hexStr, maxLength, format, baseStruct.member);            \
+        const size_t _length = FFX_BREADCRUMBS_SPRINTF(_hexStr, maxLength, format, baseStruct.member);            \
         buff = (char*)ffxBreadcrumbsAppendList(buff, count, 1, _length + 1, allocs);                \
         memcpy(buff + count, _hexStr, _length);                                                     \
         count += _length;                                                                           \

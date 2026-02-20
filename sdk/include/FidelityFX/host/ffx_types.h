@@ -24,6 +24,74 @@
 
 #include <stdint.h>
 
+#if !defined(_WIN32) && defined(__cplusplus)
+#include <cerrno>
+#include <cstddef>
+#include <cstring>
+#include <cwchar>
+
+template <typename T, size_t N>
+constexpr size_t ffx_countof(T const (&)[N]) noexcept {
+    return N;
+}
+
+inline int ffx_wcscpy_s(wchar_t* dest, size_t dest_count, const wchar_t* src) {
+    if (!dest || !src || dest_count == 0) {
+        return EINVAL;
+    }
+    const size_t src_len = std::wcslen(src);
+    if (src_len + 1 > dest_count) {
+        dest[0] = L'\0';
+        return ERANGE;
+    }
+    std::wmemcpy(dest, src, src_len + 1);
+    return 0;
+}
+
+template <size_t N>
+inline int ffx_wcscpy_s(wchar_t (&dest)[N], const wchar_t* src) {
+    return ffx_wcscpy_s(dest, N, src);
+}
+
+inline int ffx_wcscpy_s(wchar_t* dest, const wchar_t* src) {
+    if (!dest || !src) {
+        return EINVAL;
+    }
+    std::wcscpy(dest, src);
+    return 0;
+}
+
+inline int ffx_strcpy_s(char* dest, size_t dest_count, const char* src) {
+    if (!dest || !src || dest_count == 0) {
+        return EINVAL;
+    }
+    const size_t src_len = std::strlen(src);
+    if (src_len + 1 > dest_count) {
+        dest[0] = '\0';
+        return ERANGE;
+    }
+    std::memcpy(dest, src, src_len + 1);
+    return 0;
+}
+
+template <size_t N>
+inline int ffx_strcpy_s(char (&dest)[N], const char* src) {
+    return ffx_strcpy_s(dest, N, src);
+}
+
+#ifndef _countof
+#define _countof(arr) ffx_countof(arr)
+#endif
+
+#ifndef wcscpy_s
+#define wcscpy_s(...) ffx_wcscpy_s(__VA_ARGS__)
+#endif
+
+#ifndef strcpy_s
+#define strcpy_s(...) ffx_strcpy_s(__VA_ARGS__)
+#endif
+#endif
+
 ///
 /// @defgroup ffxSDK SDK
 /// The SDK module provides detailed descriptions of the various class, structs, and function which comprise the FidelityFX SDK. It is divided into several sub-modules.
@@ -77,7 +145,7 @@
 #define FFX_API __declspec(dllexport)
 #endif // #if defined (FFX_GCC)
 
-#define FFX_SDK_DEFAULT_CONTEXT_SIZE (1024 * 128)
+#define FFX_SDK_DEFAULT_CONTEXT_SIZE (1024 * 256)
 
 /// Maximum supported number of simultaneously bound SRVs.
 ///

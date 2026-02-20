@@ -42,7 +42,7 @@ struct InternalFgScContext
 uint64_t ffxProvider_FrameGenerationSwapChain_DX12::GetId() const
 {
     // FG SwapChain DX12, version 1.1.3
-    return 0xF65C'DD12'01'001'003ui64;
+    return 0xF65C'DD12'01'001'003ULL;
 }
 
 const char* ffxProvider_FrameGenerationSwapChain_DX12::GetVersionName() const

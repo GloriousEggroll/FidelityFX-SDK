@@ -29,11 +29,23 @@ endif()
 
 if (FFX_API_BACKEND STREQUAL VK_X64)
 	set(FFX_PLATFORM_NAME vk)
+	set(FFX_TARGET_SUFFIX x64)
 endif()
 if (FFX_API_BACKEND STREQUAL DX12_X64 OR
 	FFX_API_BACKEND STREQUAL DX12_ARM64 OR
 	FFX_API_BACKEND STREQUAL DX12_ARM64EC)
 	set(FFX_PLATFORM_NAME dx12)
+	if (FFX_API_BACKEND STREQUAL DX12_X64)
+		set(FFX_TARGET_SUFFIX x64)
+	elseif (FFX_API_BACKEND STREQUAL DX12_ARM64)
+		set(FFX_TARGET_SUFFIX arm64)
+	elseif (FFX_API_BACKEND STREQUAL DX12_ARM64EC)
+		set(FFX_TARGET_SUFFIX arm64ec)
+	endif()
+endif()
+
+if (NOT DEFINED FFX_PLATFORM_NAME OR NOT DEFINED FFX_TARGET_SUFFIX)
+	message(FATAL_ERROR "Unsupported FFX_API_BACKEND '${FFX_API_BACKEND}'")
 endif()
 
 project(FFX_API_${FFX_PLATFORM_NAME})
@@ -80,6 +92,18 @@ file(GLOB public_ffx_api
 	${CMAKE_CURRENT_SOURCE_DIR}/include/ffx_api/*.h
 	${CMAKE_CURRENT_SOURCE_DIR}/include/ffx_api/*.hpp)
 
+if (WIN32)
+	option(FFX_API_ENABLE_FRAMEGEN_PROVIDER "Build frame generation API providers" ON)
+else()
+	option(FFX_API_ENABLE_FRAMEGEN_PROVIDER "Build frame generation API providers" OFF)
+endif()
+
+if (WIN32)
+	option(FFX_API_AUTO_COMPILE_SHADERS "Auto-compile FidelityFX shader permutations" ON)
+else()
+	option(FFX_API_AUTO_COMPILE_SHADERS "Auto-compile FidelityFX shader permutations" OFF)
+endif()
+
 if (FFX_API_BACKEND STREQUAL VK_X64)
 	message(WARNING "Setting FFX_BACKEND_VK")
 	add_compile_definitions(FFXDLL_VERSION_API=VK)
@@ -110,7 +134,17 @@ if (FFX_API_BACKEND STREQUAL DX12_X64 OR
 		${CMAKE_CURRENT_SOURCE_DIR}/include/ffx_api/dx12/*.hpp)
 endif()
 
+if (NOT FFX_API_ENABLE_FRAMEGEN_PROVIDER)
+	list(FILTER private_ffx_api EXCLUDE REGEX ".*/ffx_provider_framegeneration\\.(h|cpp)$")
+	list(FILTER private_ffx_api_backend_vk EXCLUDE REGEX ".*/ffx_provider_framegenerationswapchain_vk\\.(h|cpp)$")
+	list(FILTER private_ffx_api_backend_dx12 EXCLUDE REGEX ".*/ffx_provider_framegenerationswapchain_dx12\\.(h|cpp)$")
+endif()
+
 add_library(amd_fidelityfx_${FFX_PLATFORM_NAME} SHARED ${private_ffx_api} ${private_ffx_api_backend_dx12} ${private_ffx_api_backend_vk} ${public_ffx_api} ${public_ffx_api_backend_dx12} ${public_ffx_api_backend_vk})
+
+if (FFX_API_ENABLE_FRAMEGEN_PROVIDER)
+	target_compile_definitions(amd_fidelityfx_${FFX_PLATFORM_NAME} PRIVATE FFX_API_ENABLE_FRAMEGEN_PROVIDER=1)
+endif()
 
 source_group("private_source" FILES ${private_ffx_api})
 source_group("public_source"  FILES ${public_ffx_api})
@@ -133,18 +167,47 @@ target_include_directories(amd_fidelityfx_${FFX_PLATFORM_NAME} PRIVATE ${CMAKE_C
 # FSR dependency, must be built before using BuildFidelityFXSDK.bat
 
 set(FFX_FSR2 ON)
-set(FFX_FSR3 ON)
 set(FFX_FSR3UPSCALER ON)
-set(FFX_OF ON)
-set(FFX_FI ON)
-set(FFX_AUTO_COMPILE_SHADERS ON)
+if (FFX_API_ENABLE_FRAMEGEN_PROVIDER)
+	set(FFX_FSR3 ON)
+	set(FFX_OF ON)
+	set(FFX_FI ON)
+else()
+	set(FFX_FSR3 OFF)
+	set(FFX_OF OFF)
+	set(FFX_FI OFF)
+endif()
+set(FFX_AUTO_COMPILE_SHADERS ${FFX_API_AUTO_COMPILE_SHADERS} CACHE BOOL "Compile shaders automatically as a prebuild step." FORCE)
 set(FFX_BUILD_AS_DLL OFF)
 add_subdirectory(../sdk sdk)
 
-target_link_libraries(amd_fidelityfx_${FFX_PLATFORM_NAME} PRIVATE ffx_fsr2_${CMAKE_GENERATOR_PLATFORM} ffx_fsr3upscaler_${CMAKE_GENERATOR_PLATFORM} ffx_opticalflow_${CMAKE_GENERATOR_PLATFORM} ffx_frameinterpolation_${CMAKE_GENERATOR_PLATFORM} DXGI)
+target_link_libraries(
+	amd_fidelityfx_${FFX_PLATFORM_NAME}
+	PRIVATE
+	ffx_fsr2_${FFX_TARGET_SUFFIX}
+	ffx_fsr3upscaler_${FFX_TARGET_SUFFIX}
+)
+
+if (FFX_API_ENABLE_FRAMEGEN_PROVIDER)
+	target_link_libraries(
+		amd_fidelityfx_${FFX_PLATFORM_NAME}
+		PRIVATE
+		ffx_opticalflow_${FFX_TARGET_SUFFIX}
+		ffx_frameinterpolation_${FFX_TARGET_SUFFIX}
+	)
+endif()
+
+if (WIN32)
+	target_link_libraries(amd_fidelityfx_${FFX_PLATFORM_NAME} PRIVATE DXGI)
+endif()
 if (FFX_API_BACKEND STREQUAL VK_X64)
 	find_package(Vulkan REQUIRED)
-	target_link_libraries(amd_fidelityfx_${FFX_PLATFORM_NAME} PRIVATE Vulkan::Headers ffx_backend_vk_${CMAKE_GENERATOR_PLATFORM})
+	target_link_libraries(
+		amd_fidelityfx_${FFX_PLATFORM_NAME}
+		PRIVATE
+		Vulkan::Headers
+		ffx_backend_vk_${FFX_TARGET_SUFFIX}
+	)
 else() # DX12
-	target_link_libraries(amd_fidelityfx_${FFX_PLATFORM_NAME} PRIVATE D3D12 ffx_backend_dx12_${CMAKE_GENERATOR_PLATFORM})
+	target_link_libraries(amd_fidelityfx_${FFX_PLATFORM_NAME} PRIVATE D3D12 ffx_backend_dx12_${FFX_TARGET_SUFFIX})
 endif()

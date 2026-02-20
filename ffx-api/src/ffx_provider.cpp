@@ -24,25 +24,35 @@
 
 #include "ffx_provider_fsr2.h"
 #include "ffx_provider_fsr3upscale.h"
+#ifdef FFX_API_ENABLE_FRAMEGEN_PROVIDER
 #include "ffx_provider_framegeneration.h"
+#endif  // FFX_API_ENABLE_FRAMEGEN_PROVIDER
 #include "ffx_provider_external.h"
 
 #include <array>
 #include <optional>
-
-#include <d3d12.h>
+#include <cstddef>
 
 #ifdef FFX_BACKEND_DX12
+#include <d3d12.h>
+#endif  // FFX_BACKEND_DX12
+
+#ifdef FFX_BACKEND_DX12
+#ifdef FFX_API_ENABLE_FRAMEGEN_PROVIDER
 #include "dx12/ffx_provider_framegenerationswapchain_dx12.h"
+#endif  // FFX_API_ENABLE_FRAMEGEN_PROVIDER
 #endif // FFX_BACKEND_DX12
 
 #ifdef FFX_BACKEND_VK
+#ifdef FFX_API_ENABLE_FRAMEGEN_PROVIDER
 #include "vk/ffx_provider_framegenerationswapchain_vk.h"
+#endif  // FFX_API_ENABLE_FRAMEGEN_PROVIDER
 #endif // FFX_BACKEND_VK
 
 static constexpr ffxProvider* providers[] = {
     &ffxProvider_FSR3Upscale::Instance,
     &ffxProvider_FSR2::Instance,
+#ifdef FFX_API_ENABLE_FRAMEGEN_PROVIDER
     &ffxProvider_FrameGeneration::Instance,
 #ifdef FFX_BACKEND_DX12
     &ffxProvider_FrameGenerationSwapChain_DX12::Instance,
@@ -50,11 +60,13 @@ static constexpr ffxProvider* providers[] = {
 #ifdef FFX_BACKEND_VK
     &ffxProvider_FrameGenerationSwapChain_VK::Instance,
 #endif // FFX_BACKEND_VK
+#endif  // FFX_API_ENABLE_FRAMEGEN_PROVIDER
 };
-static constexpr size_t providerCount = _countof(providers);
+static constexpr size_t providerCount = std::size(providers);
 
 static std::array<std::optional<ffxProviderExternal>, 10> externalProviders = {};
 
+#ifdef FFX_BACKEND_DX12
 MIDL_INTERFACE("b58d6601-7401-4234-8180-6febfc0e484c")
 IAmdExtFfxApi : public IUnknown
 {
@@ -71,8 +83,9 @@ struct ExternalProviderData
 };
 #define FFX_EXTERNAL_PROVIDER_STRUCT_VERSION 1u
 
-void GetExternalProviders(ID3D12Device* device, uint64_t descType)
+void GetExternalProviders(void* deviceRaw, uint64_t descType)
 {
+    ID3D12Device* device = reinterpret_cast<ID3D12Device*>(deviceRaw);
     static IAmdExtFfxApi* apiExtension = nullptr;
 
     if (nullptr != device)
@@ -130,11 +143,18 @@ void GetExternalProviders(ID3D12Device* device, uint64_t descType)
     }
     
 }
+#else
+void GetExternalProviders(void* deviceRaw, uint64_t descType)
+{
+    (void)deviceRaw;
+    (void)descType;
+}
+#endif  // FFX_BACKEND_DX12
 
 const ffxProvider* GetffxProvider(ffxStructType_t descType, uint64_t overrideId, void* device)
 {
     // check driver-side providers
-    GetExternalProviders(reinterpret_cast<ID3D12Device*>(device), descType);
+    GetExternalProviders(device, descType);
 
     // If we are overriding, do not make the best provider choice decision
     if (overrideId)
@@ -217,7 +237,7 @@ uint64_t GetProviderVersions(ffxStructType_t descType, void* device, uint64_t ca
     uint64_t count = 0;
 
     // check driver-side providers
-    GetExternalProviders(reinterpret_cast<ID3D12Device*>(device), descType);
+    GetExternalProviders(device, descType);
 
     for (const auto& provider : externalProviders)
     {

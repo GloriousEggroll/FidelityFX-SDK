@@ -27,10 +27,14 @@
 #include <ffx_shader_blobs.h>
 #include <ffx_breadcrumbs_list.h>
 
+#include <cmath>
+#include <cstring>
+
 #ifdef _WIN32
 #include <windows.h>
 #else
 #include <codecvt>  // this is deprecated so it's just a fallback solution
+#include <locale>
 #endif  // _WIN32
 
 #include <vulkan/vulkan.h>
@@ -341,7 +345,11 @@ FfxErrorCode ffxGetInterfaceVK(
     backendInterface->fpBreadcrumbsWrite = BreadcrumbsWriteVK;
     backendInterface->fpBreadcrumbsPrintDeviceInfo = BreadcrumbsPrintDeviceInfoVK;
     backendInterface->fpRegisterConstantBufferAllocator = RegisterConstantBufferAllocatorVK;
+#if defined(FFX_API_ENABLE_FRAMEGEN_PROVIDER)
     backendInterface->fpSwapChainConfigureFrameGeneration = ffxSetFrameGenerationConfigToSwapchainVK;
+#else
+    backendInterface->fpSwapChainConfigureFrameGeneration = nullptr;
+#endif
 
     // Memory assignments
     backendInterface->scratchBuffer = scratchBuffer;
