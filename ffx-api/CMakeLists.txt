@@ -134,6 +134,9 @@ if (FFX_API_BACKEND STREQUAL DX12_X64 OR
 		${CMAKE_CURRENT_SOURCE_DIR}/include/ffx_api/dx12/*.hpp)
 endif()
 
+if (NOT WIN32)
+	list(FILTER private_ffx_api_backend_vk EXCLUDE REGEX ".*/ffx_provider_framegenerationswapchain_vk\\.(h|cpp)$")
+endif()
 if (NOT FFX_API_ENABLE_FRAMEGEN_PROVIDER)
 	list(FILTER private_ffx_api EXCLUDE REGEX ".*/ffx_provider_framegeneration\\.(h|cpp)$")
 	list(FILTER private_ffx_api_backend_vk EXCLUDE REGEX ".*/ffx_provider_framegenerationswapchain_vk\\.(h|cpp)$")
@@ -144,6 +147,11 @@ add_library(amd_fidelityfx_${FFX_PLATFORM_NAME} SHARED ${private_ffx_api} ${priv
 
 if (FFX_API_ENABLE_FRAMEGEN_PROVIDER)
 	target_compile_definitions(amd_fidelityfx_${FFX_PLATFORM_NAME} PRIVATE FFX_API_ENABLE_FRAMEGEN_PROVIDER=1)
+	# The frame interpolation swapchain is Win32-only. Elsewhere frame
+	# generation is dispatched directly and the application paces presents.
+	if (WIN32)
+		target_compile_definitions(amd_fidelityfx_${FFX_PLATFORM_NAME} PRIVATE FFX_API_ENABLE_FRAMEGEN_SWAPCHAIN_PROVIDER=1)
+	endif()
 endif()
 
 source_group("private_source" FILES ${private_ffx_api})

@@ -44,9 +44,9 @@
 #endif // FFX_BACKEND_DX12
 
 #ifdef FFX_BACKEND_VK
-#ifdef FFX_API_ENABLE_FRAMEGEN_PROVIDER
+#ifdef FFX_API_ENABLE_FRAMEGEN_SWAPCHAIN_PROVIDER
 #include "vk/ffx_provider_framegenerationswapchain_vk.h"
-#endif  // FFX_API_ENABLE_FRAMEGEN_PROVIDER
+#endif  // FFX_API_ENABLE_FRAMEGEN_SWAPCHAIN_PROVIDER
 #endif // FFX_BACKEND_VK
 
 static constexpr ffxProvider* providers[] = {
@@ -57,7 +57,7 @@ static constexpr ffxProvider* providers[] = {
 #ifdef FFX_BACKEND_DX12
     &ffxProvider_FrameGenerationSwapChain_DX12::Instance,
 #endif // FFX_BACKEND_DX12
-#ifdef FFX_BACKEND_VK
+#if defined(FFX_BACKEND_VK) && defined(FFX_API_ENABLE_FRAMEGEN_SWAPCHAIN_PROVIDER)
     &ffxProvider_FrameGenerationSwapChain_VK::Instance,
 #endif // FFX_BACKEND_VK
 #endif  // FFX_API_ENABLE_FRAMEGEN_PROVIDER

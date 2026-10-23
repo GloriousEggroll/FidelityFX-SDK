@@ -50,7 +50,7 @@ if (FFX_FSR2 OR FFX_ALL)
 	if (MSVC)
 		target_compile_options(ffx_fsr2_${FFX_PLATFORM_NAME} PRIVATE
 		"/W4" # warning level 4
-		"/WX" # warnings as errors
+		$<$<CXX_COMPILER_ID:MSVC>:/WX> # warnings as errors (MSVC; clang-cl warns more)
 		# disable MSVC warnings that are too strict
 		"/wd4201" # nonstandard extension used: nameless struct/union
 		"/wd4324" # structure was padded due to alignment specifier

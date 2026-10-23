@@ -43,7 +43,13 @@ if (MSVC)
 	# /GR (RTTI): if not using typeid or dynamic_cast, we can disable RTTI to save binary size using /GR-
 	# /GS (buffer security check)
 	# /Gy (enable function-level linking)
-	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /W3 /GR- /fp:fast /GS /Gy")
+	# clang-cl rejects /fp:fast on top of an embedding project's /fp:strict
+	# (-Woverriding-complex-range under /WX); keep the embedder's model there.
+	if (CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
+		set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /W3 /GR- /fp:fast /GS /Gy")
+	else()
+		set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /W3 /GR- /GS /Gy")
+	endif()
 endif()
 
 if (FFX_API_BACKEND STREQUAL VK_X64 AND NOT WIN32)

@@ -122,17 +122,17 @@ if (NOT FFX_CUSTOM_API)
 		set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} /Z7 /Od")
 	endif()
     
-	# Write debug, profile, and release versions of the static libs to the /bin folder as they are uniquely named	
-	set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY_DEBUG   ${CMAKE_HOME_DIRECTORY}/bin/ffx_sdk/)
-	set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY_RELEASE ${CMAKE_HOME_DIRECTORY}/bin/ffx_sdk/)
-	set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY_RELWITHDEBINFO ${CMAKE_HOME_DIRECTORY}/bin/ffx_sdk/)
+	# Write debug, profile, and release versions of the static libs to the build tree's /bin folder as they are uniquely named
+	set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY_DEBUG   ${CMAKE_BINARY_DIR}/bin/ffx_sdk/)
+	set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY_RELEASE ${CMAKE_BINARY_DIR}/bin/ffx_sdk/)
+	set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY_RELWITHDEBINFO ${CMAKE_BINARY_DIR}/bin/ffx_sdk/)
 
 
 	if (FFX_BUILD_AS_DLL)
 		# Write both debug and release versions of the dlls to the /bin folder as they are uniquely named
-		set(CMAKE_RUNTIME_OUTPUT_DIRECTORY_DEBUG   ${CMAKE_HOME_DIRECTORY}/bin/ffx_sdk/)
-		set(CMAKE_RUNTIME_OUTPUT_DIRECTORY_RELEASE ${CMAKE_HOME_DIRECTORY}/bin/ffx_sdk/)
-		set(CMAKE_RUNTIME_OUTPUT_DIRECTORY_RELWITHDEBINFO ${CMAKE_HOME_DIRECTORY}/bin/ffx_sdk/)
+		set(CMAKE_RUNTIME_OUTPUT_DIRECTORY_DEBUG   ${CMAKE_BINARY_DIR}/bin/ffx_sdk/)
+		set(CMAKE_RUNTIME_OUTPUT_DIRECTORY_RELEASE ${CMAKE_BINARY_DIR}/bin/ffx_sdk/)
+		set(CMAKE_RUNTIME_OUTPUT_DIRECTORY_RELWITHDEBINFO ${CMAKE_BINARY_DIR}/bin/ffx_sdk/)
         set_property(DIRECTORY APPEND PROPERTY COMPILE_DEFINITIONS FFX_BUILD_AS_DLL)
 	endif()
 else()
@@ -144,9 +144,9 @@ else()
 		set( CMAKE_ARCHIVE_OUTPUT_DIRECTORY_${OUTPUTCONFIG} ${BIN_OUTPUT}/ffx_sdk/ )
 		if (FFX_BUILD_AS_DLL)
 			# Write both debug and release versions of the dlls to the /bin folder as they are uniquely named
-			set(CMAKE_RUNTIME_OUTPUT_DIRECTORY_DEBUG   ${CMAKE_HOME_DIRECTORY}/bin/ffx_sdk/)
-			set(CMAKE_RUNTIME_OUTPUT_DIRECTORY_RELEASE ${CMAKE_HOME_DIRECTORY}/bin/ffx_sdk/)
-			set(CMAKE_RUNTIME_OUTPUT_DIRECTORY_RELWITHDEBINFO ${CMAKE_HOME_DIRECTORY}/bin/ffx_sdk/)
+			set(CMAKE_RUNTIME_OUTPUT_DIRECTORY_DEBUG   ${CMAKE_BINARY_DIR}/bin/ffx_sdk/)
+			set(CMAKE_RUNTIME_OUTPUT_DIRECTORY_RELEASE ${CMAKE_BINARY_DIR}/bin/ffx_sdk/)
+			set(CMAKE_RUNTIME_OUTPUT_DIRECTORY_RELWITHDEBINFO ${CMAKE_BINARY_DIR}/bin/ffx_sdk/)
 		endif()
 	endforeach( OUTPUTCONFIG CMAKE_CONFIGURATION_TYPES )
 
@@ -172,11 +172,14 @@ if(FFX_VS_VERSION STREQUAL 2015 OR FFX_VS_VERSION STREQUAL 2017)
     set(CMAKE_VS_WINDOWS_TARGET_PLATFORM_VERSION "10.0.18362.0")
 endif()
 
-# Setup common variables
-if (UNIX)
+# Setup common variables. The shader compiler is a Windows program; run it
+# through Wine on any non-Windows host, including when cross-compiling.
+if (CMAKE_HOST_UNIX)
 	find_program(FFX_WINE_EXECUTABLE wine)
 	if (FFX_WINE_EXECUTABLE)
-		set(FFX_SC_EXECUTABLE ${FFX_WINE_EXECUTABLE};${CMAKE_CURRENT_SOURCE_DIR}/tools/binary_store/FidelityFX_SC.exe)
+		# A private prefix in the build tree; never the user's ~/.wine.
+		set(FFX_SC_EXECUTABLE ${CMAKE_COMMAND};-E;env;WINEPREFIX=${CMAKE_BINARY_DIR}/ffx-wine-prefix;WINEDEBUG=-all;
+			${FFX_WINE_EXECUTABLE};${CMAKE_CURRENT_SOURCE_DIR}/tools/binary_store/FidelityFX_SC.exe)
 		message(STATUS "FidelityFX: using Wine to run FidelityFX_SC.exe for shader permutation generation")
 	else()
 		set(FFX_SC_EXECUTABLE ${CMAKE_CURRENT_SOURCE_DIR}/tools/binary_store/FidelityFX_SC.exe)
